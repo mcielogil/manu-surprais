@@ -643,14 +643,39 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
   function clearGas(){const gas=$('#gas');gas.classList.add('out');setTimeout(()=>{gas.innerHTML='';gas.classList.remove('out');},1150);}
 
   function boom(){
-    fart(1.5);
+    fart(2.2);
     const t=document.querySelector('#mainAlp .tailg').getBoundingClientRect();
-    cloud(t.left+t.width/2,t.top+t.height/2,34,true);
-    setTimeout(()=>{
-      $('#intro').hidden=true; $('#reveal').hidden=false; scrollTo(0,0);
-      buildTitle(); startCountdown();
-      setTimeout(()=>{clearGas(); $('#hero').classList.add('landed'); },300);
-    },reduced?200:1500);
+    const tx=t.left+t.width/2, ty=t.top+t.height/2;
+    if(reduced){
+      cloud(tx,ty,34,true);
+      setTimeout(reveal,200); return;
+    }
+    // a small puff right at the tail, then Manu shoots out of it
+    cloud(tx,ty,8,false);
+    const fly=document.createElement('img');
+    fly.src=document.querySelector('.manu').src; fly.alt='';
+    const H=Math.min(innerHeight*.55,520);
+    fly.style.cssText='position:fixed;left:'+tx+'px;top:'+ty+'px;height:'+H+'px;width:auto;max-width:none;z-index:55;pointer-events:none;transform-origin:50% 60%;filter:drop-shadow(0 8px 10px #3a1f2b66)';
+    document.body.appendChild(fly);
+    const dx=innerWidth/2-tx, dy=innerHeight*.5-ty;
+    fly.animate([
+      {transform:'translate(-50%,-50%) scale(.04) rotate(0deg)',opacity:1},
+      {transform:'translate(calc(-50% + 18px),calc(-50% + 6px)) scale(.14) rotate(25deg)',opacity:1,offset:.2},
+      {transform:'translate(calc(-50% + '+(dx*.35+60)+'px),calc(-50% + '+(dy-160)+'px)) scale(.45) rotate(300deg)',opacity:1,offset:.45},
+      {transform:'translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(1) rotate(720deg)',opacity:1}
+    ],{duration:1400,easing:'cubic-bezier(.3,.5,.3,1)',fill:'forwards'});
+    // trail of little puffs behind him
+    let k=0; const trail=setInterval(()=>{ const r=fly.getBoundingClientRect(); cloud(r.left+r.width/2,r.top+r.height*.75,2,false); if(++k>6) clearInterval(trail); },120);
+    setTimeout(()=>{ const w=document.createElement('div'); w.className='prrr'; w.style.top='18%'; w.textContent='¡PLOP!'; $('#gas').appendChild(w); },350);
+    // then the big cloud fills the screen
+    setTimeout(()=>cloud(innerWidth/2,innerHeight*.6,30,true),1250);
+    setTimeout(()=>{ fly.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}); },2300);
+    setTimeout(()=>{ reveal(); fly.remove(); },2600);
+  }
+  function reveal(){
+    $('#intro').hidden=true; $('#reveal').hidden=false; scrollTo(0,0);
+    buildTitle(); startCountdown();
+    setTimeout(()=>{clearGas(); $('#hero').classList.add('landed'); },300);
   }
   function buildTitle(){
     const h=$('#bigt'); h.innerHTML='';
