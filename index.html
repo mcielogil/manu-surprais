@@ -484,15 +484,24 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
     esVoice=v.find(x=>/^es[-_](AR|419|MX|US)/i.test(x.lang))||v.find(x=>/^es/i.test(x.lang))||null;
   }
   if(TTS){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged',pickVoice); }catch(e){} }
+  let ttsUnlocked=false, ttsStarted=0;
+  function unlockTTS(){
+    if(!TTS||ttsUnlocked) return; ttsUnlocked=true;
+    try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; u.lang='es-AR'; speechSynthesis.speak(u); }catch(e){}
+    pickVoice();
+  }
   function sayJa(){
-    if(!TTS||(!esVoice&&!(speechSynthesis.getVoices()||[]).length)) return false;
-    const now=performance.now(); if(now<ttsBusyUntil||speechSynthesis.speaking) return true;
+    if(!TTS) return false;
+    if(!esVoice) pickVoice();
+    const now=performance.now();
+    if(speechSynthesis.speaking&&now-ttsStarted>3500){ try{speechSynthesis.cancel();}catch(e){} }
+    else if(now<ttsBusyUntil||speechSynthesis.speaking) return true;
     let i=Math.floor(Math.random()*JAS.length); if(i===lastJa) i=(i+1)%JAS.length; lastJa=i;
     const u=new SpeechSynthesisUtterance(JAS[i]);
     u.lang=esVoice?esVoice.lang:'es-AR'; if(esVoice) u.voice=esVoice;
     u.pitch=1.75+Math.random()*.25; u.rate=1.25+Math.random()*.25; u.volume=1;
-    try{ speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){ return false; }
-    ttsBusyUntil=now+900; duck(); return true;
+    try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){ return false; }
+    ttsStarted=now; ttsBusyUntil=now+900; duck(); return true;
   }
   function giggle(){
     if(sayJa()) return;
@@ -563,9 +572,10 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
   $('#mus').addEventListener('click',toggleMusic);
   document.querySelector('.btn.song').addEventListener('click',()=>{ if(musicOn){ wantMusic=false; stopMusic(); } });
   // Try to start right away (works where the browser allows it); otherwise the first touch anywhere starts it.
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
   try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   if(ctx){ ctx.onstatechange=paintSound; if(ctx.state==='running') startMusic(); }
-  const kick=()=>{ ac(); if(ctx) loadLaughs(ctx); if(wantMusic) startMusic(); paintSound();
+  const kick=()=>{ unlockTTS(); ac(); if(ctx) loadLaughs(ctx); if(wantMusic) startMusic(); paintSound();
     if(ctx&&ctx.state==='running'){ ['pointerdown','touchend','keydown','click'].forEach(ev=>removeEventListener(ev,kick,true)); } };
   ['pointerdown','touchend','keydown','click'].forEach(ev=>addEventListener(ev,kick,true));
   paintSound();
