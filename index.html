@@ -494,7 +494,14 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
     try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; u.lang='es-AR'; speechSynthesis.speak(u); }catch(e){}
     pickVoice();
   }
-  let ttsOK=false, ttsBroken=false;
+  const BUBBLE_JA=['¡Ja ja ja, ay basta!','¡Ja ja ja ja!','¡Ji ji ji, qué cosquillas!','¡Ay basta, ja ja!'];
+  let sayT=null, saying=false;
+  function say(txt){
+    const b=document.getElementById('bubble'); if(!b) return;
+    saying=true; b.textContent=txt.charAt(0).toUpperCase()+txt.slice(1); clearTimeout(sayT);
+    sayT=setTimeout(()=>{ saying=false; if(typeof refreshBubble==='function') refreshBubble(); },1400);
+  }
+  let ttsOK=false, ttsBroken=false, ttsMiss=0;
   function sayJa(){
     if(!TTS||ttsBroken) return false;
     if(!esVoice) pickVoice();
@@ -510,7 +517,8 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
     u.volume=1;
     u.onstart=()=>{ ttsOK=true; };
     try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){ ttsBroken=true; return false; }
-    if(!ttsOK) setTimeout(()=>{ if(!ttsOK){ ttsBroken=true; try{speechSynthesis.cancel();}catch(e){} ttsBusyUntil=0; playClip(); } },800);
+    say(JAS[i]);
+    if(!ttsOK) setTimeout(()=>{ if(!ttsOK){ if(++ttsMiss>=3) ttsBroken=true; try{speechSynthesis.cancel();}catch(e){} ttsBusyUntil=0; playClip(); } },1800);
     ttsStarted=now; ttsBusyUntil=now+900; duck(); return true;
   }
   function giggle(){
@@ -518,6 +526,7 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
     playClip();
   }
   function playClip(){
+    say(BUBBLE_JA[Math.floor(Math.random()*BUBBLE_JA.length)]);
     const c=ac(); if(!c) return; loadLaughs(c);
     if(c.currentTime<laughUntil||!laughBufs.length) return;
     let i=Math.floor(Math.random()*laughBufs.length); if(i===lastPick&&laughBufs.length>1) i=(i+1)%laughBufs.length; lastPick=i;
@@ -597,13 +606,14 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
   const stage=$('#stage'), belly=$('#belly'), meter=$('#meter'), mlabel=$('#mlabel'), bubble=$('#bubble');
   let progress=0,last=null,down=false,done=false,lastGig=0,gigT=null;
   const lines=['¡La panza, Manu!','Jiji, más…','¡Ahí, ahí!','Ay no… algo se viene','¡Uy uy uy!'];
+  function refreshBubble(){ bubble.textContent=lines[Math.min(lines.length-1,Math.floor(progress/22))]; }
   function setProg(p){
     progress=Math.min(100,p);
     meter.style.width=progress+'%'; mlabel.textContent='Cosquillas: '+Math.round(progress)+'%';
     stage.classList.toggle('wiggle',progress>8);
     stage.classList.toggle('happy',progress>35);
     stage.classList.toggle('puffed',progress>78);
-    bubble.textContent=lines[Math.min(lines.length-1,Math.floor(progress/22))];
+    if(!saying) refreshBubble();
     if(progress>=100&&!done){done=true;boom();}
   }
   function add(dist){
