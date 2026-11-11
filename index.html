@@ -477,11 +477,15 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
   }
   /* Spoken "ja ja ja" with a squeaky cartoon voice (device voice), synthesized clip as fallback */
   const TTS=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
-  const JAS=['ja ja ja ja','ja ja ja ja ja','jajajajá','ja ja ja, ¡ay basta!','ji ji ji, ja ja ja','ja ja ja, ¡qué cosquillas!'];
+  const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const MOBILE=IOS||/Android|Mobile/i.test(navigator.userAgent);
+  const JAS=MOBILE?['ja, ja, ja, ja','ja, ja, ja, ja, ja','ja, ja, ja. ¡Ay, basta!','ji, ji, ji. ja, ja, ja','ja, ja, ja. ¡Qué cosquillas!']
+                  :['ja ja ja ja','ja ja ja ja ja','jajajajá','ja ja ja, ¡ay basta!','ji ji ji, ja ja ja','ja ja ja, ¡qué cosquillas!'];
   let esVoice=null, ttsBusyUntil=0, lastJa=-1;
   function pickVoice(){
     if(!TTS) return; const v=speechSynthesis.getVoices()||[];
-    esVoice=v.find(x=>/^es[-_](AR|419|MX|US)/i.test(x.lang))||v.find(x=>/^es/i.test(x.lang))||null;
+    const es=v.filter(x=>/^es/i.test(x.lang));
+    esVoice=es.find(x=>/^es[-_](AR|419|MX|US)/i.test(x.lang)&&x.localService)||es.find(x=>/^es[-_](AR|419|MX|US)/i.test(x.lang))||es.find(x=>x.localService)||es[0]||null;
   }
   if(TTS){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged',pickVoice); }catch(e){} }
   let ttsUnlocked=false, ttsStarted=0;
@@ -500,7 +504,10 @@ h2.big span{display:inline-block;opacity:0;transform:translateY(30px) rotate(-4d
     let i=Math.floor(Math.random()*JAS.length); if(i===lastJa) i=(i+1)%JAS.length; lastJa=i;
     const u=new SpeechSynthesisUtterance(JAS[i]);
     u.lang=esVoice?esVoice.lang:'es-AR'; if(esVoice) u.voice=esVoice;
-    u.pitch=1.75+Math.random()*.25; u.rate=1.25+Math.random()*.25; u.volume=1;
+    // phone voices run much faster/higher at the same settings, so keep them gentle there
+    if(MOBILE){ u.pitch=1.4+Math.random()*.15; u.rate=IOS?(.95+Math.random()*.08):(1.0+Math.random()*.1); }
+    else { u.pitch=1.75+Math.random()*.25; u.rate=1.25+Math.random()*.25; }
+    u.volume=1;
     u.onstart=()=>{ ttsOK=true; };
     try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){ ttsBroken=true; return false; }
     if(!ttsOK) setTimeout(()=>{ if(!ttsOK){ ttsBroken=true; try{speechSynthesis.cancel();}catch(e){} ttsBusyUntil=0; playClip(); } },800);
